@@ -6,9 +6,9 @@ Repositories are checked out side by side (paths are relative to this file):
 |---|---|---|
 | ../qsim | source code, tests, documentation | code changes go here |
 | ../qsim-sdd | specs, plans, tasks, skills | SDD artifacts go here |
-| ../agent-intructions | shared agent instructions | READ-ONLY: do not edit, commit, or push |
+| ../agent-instructions | shared agent instructions | READ-ONLY: do not edit, commit, or push |
  
-@../agent-intructions/AGENTS.md
+@../agent-instructions/AGENTS.md
  
 ## Rules
 - Do not create agent-related files in qsim (CLAUDE.md, .claude/, specs/), and do not reference specs or task IDs in code, comments, or commit messages.
