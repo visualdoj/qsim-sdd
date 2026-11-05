@@ -15,9 +15,13 @@
 - None. Only `System` and the RTL subset allowed by the style guide: no
   `SysUtils`, `Classes`, `Math`. `Sin`, `Cos`, `Sqrt`, `ArcTan` and `Pi` are in
   `System`.
-- One exception: the Vulkan program uses a Vulkan header (such as
-  `visualdoj/dvulkan`) and the `windows` unit. Nothing else depends on them.
-  How the header gets into the build is decided in that program's spec.
+- One exception: Vulkan rendering lives in `src/qsim_vulkan_visualizer.inc`,
+  an include file that calls the Vulkan API. A program that includes it brings
+  a Vulkan header (such as `visualdoj/dvulkan`) into scope, so the library
+  units do not depend on Vulkan. The Windows demo includes it and also uses
+  the `windows` unit. How the demo gets the header is decided in its spec.
+- The build has no shader compiler, so the include carries its shaders as
+  SPIR-V.
 
 ## Simulation model
 
@@ -28,6 +32,10 @@
   20 qubits. A circuit over the qubit limit is an error, not a crash.
 - Measurement uses qsim's own seeded RNG built on integer operations only, so
   one seed gives the same samples on every target.
+- SIMD kernels sit behind a per-CPU include, with the plain Pascal kernels as
+  the `_no` fallback. The fallback is the reference SIMD results are tested
+  against, and the only backend on ppc64 and riscv64. x86_64 kernels must
+  work with both the Linux and the win64 calling conventions.
 - Visualization units compute what to draw (bars, phases, Bloch vectors,
   circuit layout) apart from how to draw it, so terminal output, `qdb` and the
   Vulkan program share them.
@@ -46,6 +54,7 @@
 
     Makefile
     src/            library units, qsim_<topic>.pas
+    src/qsim_vulkan_visualizer.inc  Vulkan rendering, for programs that include it
     tools/qsim/     qsim CLI
     tools/qdb/      qdb debugger
     demos/<name>/   demos
@@ -68,6 +77,7 @@
 | riscv64-linux, FPC 3.3.1 | `fpc-ci riscv64`, qemu | build + test |
 | x86_64-win64 | `fpc-ci win64`, Wine | build only |
 
-- The Vulkan program builds only for win64.
+- The Windows demo, and with it `qsim_vulkan_visualizer.inc`, builds only for
+  win64.
 - qsim is a private repository and GitHub Actions minutes are paid: the local
   checks above are the acceptance bar.

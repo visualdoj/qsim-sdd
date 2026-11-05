@@ -60,9 +60,28 @@ Each phase becomes one spec in `specs/NNN-name/` and is done when
 
 ## Stage 5: Vulkan visualizer for Windows
 
-35. Window with a Vulkan swapchain, cleared to a color.
+35. The Windows demo opens a window and includes `qsim_vulkan_visualizer.inc`,
+    which clears it to a color through Vulkan.
 36. Probability bars of a fixed state.
 37. Load a circuit file and step through it with keys.
 38. Phase shown as color.
 39. Bloch spheres in 3D.
 40. Animated transitions between steps.
+
+## Stage 6: SIMD
+
+41. Benchmark program: run time of fixed circuits at 16 to 24 qubits, run
+    natively by hand; records a baseline.
+42. Gates go through a few kernels (one-qubit matrix, controlled, diagonal)
+    behind a per-CPU include; only the plain Pascal `_no` backend so far.
+43. SSE2 kernel for one-qubit gates on x86_64, tested against `_no` on random
+    circuits.
+44. SSE2 kernels for controlled and diagonal gates.
+45. AVX2 kernels, chosen at run time by CPUID; SSE2 otherwise.
+
+## Ideas, not decided
+
+- GPU simulation: qsim generates SPIR-V compute shaders for gates and runs
+  them through Vulkan, possibly sharing the Vulkan setup with
+  `qsim_vulkan_visualizer.inc`. Generating SPIR-V from Pascal keeps the build
+  free of shader compilers. Decide after stage 6.

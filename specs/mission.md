@@ -21,7 +21,8 @@ the state of each qubit, measurement samples.
 
 ## Non-goals
 
-- Speed at large qubit counts: SIMD, threads, GPU, distributed state.
+- Threads and distributed state. SIMD is planned, GPU is an idea for later
+  ([roadmap.md](roadmap.md)).
 - Noise models, density-matrix simulation, real quantum hardware.
 - OpenQASM 3. OpenQASM 2 support grows only as far as tests and demos need.
 - Graphics on platforms other than Windows.
