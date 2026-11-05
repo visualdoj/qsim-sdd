@@ -7,6 +7,14 @@ small thing through all layers, with its tests and its input errors.
 Each phase becomes one spec in `specs/NNN-name/` and is done when
 `make build test` passes on every target in [tech-stack.md](tech-stack.md).
 
+## Stage 0: library API
+
+0. Design the whole library API: the interface of the public unit with a
+   comment on each declaration, no implementation. It covers compiling,
+   getting errors, running, reading results, producing OpenQASM code, and
+   debugging (stepping and reading the internal state, for `qdb` and the
+   visualizations). Later phases implement it piece by piece.
+
 ## Stage 1: simulator core
 
 1. Skeleton: `make build test` builds `qsim`, which prints usage; one test
@@ -25,8 +33,8 @@ Each phase becomes one spec in `specs/NNN-name/` and is done when
 13. A gate applied to a whole register: `h q;`.
 14. Several qubit and bit registers.
 15. User `gate` definitions.
-16. Library example: a Pascal program builds and runs a Bell circuit in code,
-    without a file.
+16. Producing code: a Pascal example produces a Bell circuit as OpenQASM
+    through the API, compiles it from memory, runs it and reads the result.
 
 ## Stage 2: visualizations
 

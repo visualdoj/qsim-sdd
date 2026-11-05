@@ -8,7 +8,11 @@ the state of each qubit, measurement samples.
 
 1. **Readable reference.** Small, clear code that is easy to learn from and to
    check results against. Correctness and clarity come before speed.
-2. **Pascal library.** FPC programs build and run circuits from code.
+2. **Pascal library.** A clean, minimal API with as few calls as possible
+   that still covers every need: compiling, getting errors, running, reading
+   results, producing OpenQASM code, and debugging. `qsim`, `qdb`, the
+   visualizations and the demos use only this API; `qdb` and the
+   visualizations read the internal state through its debugging part.
 3. **`qsim` CLI.** Runs a circuit file (a subset of OpenQASM 3) and prints
    amplitudes, probabilities or measurement samples.
 4. **Visualization library.** Interesting and cool views of the state:
