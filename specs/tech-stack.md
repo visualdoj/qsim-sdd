@@ -43,7 +43,8 @@
 
 ## Input and output
 
-- Circuit files: a subset of OpenQASM 2.0, extended phase by phase
+- Circuit files: a subset of OpenQASM 3 with the gates of `stdgates.inc`,
+  extended phase by phase
   ([roadmap.md](roadmap.md)).
 - Input errors print `file:line:col: message` and exit with a nonzero code.
 - Text output only, no binary files, so byte order never matters.

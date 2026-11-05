@@ -9,7 +9,7 @@ the state of each qubit, measurement samples.
 1. **Readable reference.** Small, clear code that is easy to learn from and to
    check results against. Correctness and clarity come before speed.
 2. **Pascal library.** FPC programs build and run circuits from code.
-3. **`qsim` CLI.** Runs a circuit file (a subset of OpenQASM 2) and prints
+3. **`qsim` CLI.** Runs a circuit file (a subset of OpenQASM 3) and prints
    amplitudes, probabilities or measurement samples.
 4. **Visualization library.** Interesting and cool views of the state:
    probability bars, phases, Bloch spheres, circuit diagrams, histograms.
@@ -25,7 +25,8 @@ the state of each qubit, measurement samples.
 - Threads and distributed state. SIMD is planned, GPU is an idea for later
   ([roadmap.md](roadmap.md)).
 - Noise models, density-matrix simulation, real quantum hardware.
-- OpenQASM 3. OpenQASM 2 support grows only as far as tests and demos need.
+- All of OpenQASM 3: support grows only as far as tests and demos need.
+  Timing and pulse features (`delay`, `box`, `defcal`) are out.
 - Graphics on platforms other than Windows.
 
 ## Done means

@@ -11,11 +11,11 @@ Each phase becomes one spec in `specs/NNN-name/` and is done when
 
 1. Skeleton: `make build test` builds `qsim`, which prints usage; one test
    passes.
-2. A file with `qreg q[1];` and `x q[0];` prints the state `|1>`.
+2. A file with `qubit[1] q;` and `x q[0];` prints the state `|1>`.
 3. `h`: prints `|+>`; fixed digits, no `-0`.
 4. Several qubits and `cx`: Bell state.
 5. Probability of each basis state.
-6. Seeded RNG, `creg`, `measure`, shots and counts.
+6. Seeded RNG, `bit`, `measure`, shots and counts.
 7. `z`, `s`, `sdg`, `t`, `tdg`, `y`.
 8. `rx`, `ry`, `rz` with numeric angles.
 9. Angle expressions: `pi`, `+ - * /`, parentheses.
@@ -23,7 +23,7 @@ Each phase becomes one spec in `specs/NNN-name/` and is done when
 11. `cz`, `cp`, `swap`.
 12. `ccx` (Toffoli) and `cswap` (Fredkin).
 13. A gate applied to a whole register: `h q;`.
-14. Several `qreg`s and `creg`s.
+14. Several qubit and bit registers.
 15. User `gate` definitions.
 16. Library example: a Pascal program builds and runs a Bell circuit in code,
     without a file.
@@ -50,8 +50,8 @@ Each phase becomes one spec in `specs/NNN-name/` and is done when
 ## Stage 4: demos
 
 29. Grover search on 2 qubits.
-30. Grover search on 3 qubits, with a multi-controlled Z.
-31. QFT and inverse QFT, checked on known states.
+30. Grover search on 3 qubits, with `ctrl @` for the multi-controlled Z.
+31. QFT, and inverse QFT with `inv @`, checked on known states.
 32. Shor for N = 15, a = 7: quantum period finding, then continued fractions
     find 3 × 5.
 33. Sudoku solver: Grover on a 2×2 binary Sudoku; a Pascal program builds the
