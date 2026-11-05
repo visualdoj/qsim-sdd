@@ -1,7 +1,7 @@
 # qsim roadmap
 
 Thin end-to-end slices. From phase 2 on, a circuit file goes through the
-library and the `qsim` CLI to printed output, and every later phase adds one
+library and the `qrun` CLI to printed output, and every later phase adds one
 small thing through all layers, with its tests and its input errors.
 
 Each phase becomes one spec in `specs/NNN-name/` and is done when
@@ -21,7 +21,7 @@ Each phase becomes one spec in `specs/NNN-name/` and is done when
 
 ## Stage 1: simulator core
 
-1. Skeleton: `make build test` builds `qsim`, which prints usage; one test
+1. Skeleton: `make build test` builds `qrun`, which prints usage; one test
    passes.
 2. A file with `qubit[1] q;` and `x q[0];` prints the state `|1>`.
 3. `h`: prints `|+>`; fixed digits, no `-0`.

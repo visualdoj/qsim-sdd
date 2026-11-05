@@ -1,9 +1,9 @@
 # 000 library API
 
 Roadmap: phase 0. The whole public API of the qsim library, as the interface
-of one unit, `src/qsim_api.pas`, with a comment on each declaration. Later
-phases implement it piece by piece ([plan.md](plan.md)); this phase adds no
-code to qsim.
+of one unit, `src/qsim.pas`, with a comment on each declaration. Later phases
+implement it piece by piece ([plan.md](plan.md)); this phase adds no code to
+qsim.
 
 The spec also drafts two parts that wait for later decisions:
 [SPIR-V generation](#draft-spir-v-generation), the producing-code part of the
@@ -12,18 +12,25 @@ API, and [the Vulkan renderer](#draft-vulkan-renderer) in
 
 ## Decisions
 
-- One unit, three objects: `TQsimCircuit` is what to run, `TQsimState` is a
-  run of it, `TQsimSpirv` (draft) is GPU code made from it. No free functions.
+- One unit, `qsim`, with three objects: `TQsimCircuit` is what to run,
+  `TQsimState` is a run of it, `TQsimSpirv` (draft) is GPU code made from it.
+  No free functions. The CLI is `qrun`, as a program named `qsim` could not
+  use the unit `qsim`.
 - Circuits are made only from OpenQASM text. A program that builds a circuit,
   like the Sudoku demo, writes OpenQASM and compiles it; there are no builder
   calls.
 - A compiled circuit is a flat list of operations: a one-qubit gate on
-  `Target` with a mask of control qubits, a swap, or a measurement. User
+  `Target` with a list of control qubits, a swap, or a measurement. User
   gates, `ctrl @`, `inv @` and gates on whole registers are expanded by the
   compiler. The same list is run by `TQsimState`, stepped over by `qdb`, drawn
   by the circuit diagram and turned into SPIR-V.
-- Errors: `Boolean` result plus `out TQsimError`, first error only. Running
-  cannot fail: compiling checks the qubit and bit limits.
+- No limits of its own: the OS decides how many qubits fit in memory.
+  Registers, controls and classical bits are counted lists, not masks of a
+  fixed width.
+- Errors: `Boolean` result plus `out TQsimError`, first error only. Compiling
+  fails on bad input, `TQsimState.Init` when the OS cannot give memory for the
+  state. Stepping and running cannot fail. On Linux the OS may overcommit:
+  give the memory, then kill the process when `Reset` touches it.
 - Results and internal state are public read-only fields: no getters.
   Probabilities, marginals, Bloch vectors and counts are computed by the
   callers (the visualization units) from `Amplitudes` and the outcomes of
@@ -31,8 +38,6 @@ API, and [the Vulkan renderer](#draft-vulkan-renderer) in
 - Debugging is `Step`, `Position` and `Reset`. `qdb`'s `back` is `Reset`
   with the same seed and `Step` up to one operation before, so measurements
   repeat.
-- Limits: 24 qubits (256 MiB of state, the top of the benchmark), 64
-  classical bits (one `UInt64` per shot).
 
 ## Coverage
 
@@ -52,11 +57,11 @@ API, and [the Vulkan renderer](#draft-vulkan-renderer) in
 
 ## API
 
-The interface section of `src/qsim_api.pas`. Phases may add private fields
-and internal units; public declarations change only through this spec.
+The interface section of `src/qsim.pas`. Phases may add private fields and
+internal units; public declarations change only through this spec.
 
 ```pascal
-unit qsim_api;
+unit qsim;
 //
 //  Public API of qsim: compiles a circuit written in a subset of OpenQASM 3,
 //  runs it on a state vector, and reads the results and the internal state.
@@ -72,12 +77,6 @@ unit qsim_api;
 interface
 
 const
-  QSIM_MAX_QUBITS = 24;
-    // More qubits is a compile error. The state of n qubits takes 16 * 2^n
-    // bytes: 256 MiB at the limit.
-  QSIM_MAX_BITS = 64;
-    // More classical bits is a compile error, so the bits fit one UInt64.
-
   // Operation codes, see TQsimOp. The comments give the matrix of each
   // one-qubit gate by rows, with e(x) = exp(x). Gates with controls become one
   // of these with TQsimOp.Controls: cx and ccx are X, cz is Z, cp is P, cswap
@@ -149,9 +148,11 @@ TQsimOp = record
     // The second qubit of QSIM_OP_SWAP.
   Bit: Int32;
     // Classical bit QSIM_OP_MEASURE writes.
-  Controls: UInt32;
-    // Control qubits, bit i is qubit i: the operation acts only on the basis
-    // states where all of them are 1.
+  ControlCount: Int32;
+    // Number of Controls.
+  Controls: PInt32;
+    // Control qubits: the operation acts only on the basis states where all
+    // of them are 1. Points into memory of the circuit.
   ParamCount: Int32;
     // Number of used Params: 1 for rx, ry, rz and p, 3 for U, 0 otherwise.
   Params: array[0..2] of Double;
@@ -167,9 +168,9 @@ TQsimCircuit = object
 public
   // Public fields - read only!
   QubitCount: Int32;
-    // Qubits of all registers, at most QSIM_MAX_QUBITS.
+    // Qubits of all registers.
   BitCount: Int32;
-    // Classical bits of all registers, at most QSIM_MAX_BITS.
+    // Classical bits of all registers.
   OpCount: Int32;
     // Number of Ops.
   Ops: PQsimOp;
@@ -207,28 +208,30 @@ public
   Amplitudes: PQsimComplex;
     // 2^Circuit^.QubitCount amplitudes. Bit i of the index is qubit i, so
     // qubit 0 is the rightmost digit in |...>.
-  Bits: UInt64;
-    // Classical bits, bit i is classical bit i.
+  Bits: PUInt8;
+    // Circuit^.BitCount classical bits, 0 or 1 each.
   Position: Int32;
     // Index in Circuit^.Ops of the next operation; Circuit^.OpCount at the end.
 
-  procedure Init(Circuit: PQsimCircuit; Seed: UInt64);
-    // Allocates the state for Circuit and calls Reset(Seed). Circuit must not
-    // change until Done.
+  function Init(Circuit: PQsimCircuit; Seed: UInt64;
+                out Error: TQsimError): Boolean;
+    // Allocates the state for Circuit and calls Reset(Seed). Fails, leaving
+    // nothing to free, if the OS cannot give memory for the amplitudes: qsim
+    // has no qubit limit of its own. Circuit must not change until Done.
   procedure Done;
     // Frees the state.
   procedure Reset(Seed: UInt64);
-    // Goes back to the start: the state |0...0>, Bits 0, Position 0.
+    // Goes back to the start: the state |0...0>, all Bits 0, Position 0.
     // Measurements draw from the random sequence of Seed: equal seeds give
     // equal results on every target.
   function Step: Boolean;
     // Applies the operation at Position and moves to the next one. Does
     // nothing and returns False at the end, so 'while State.Step do ;' runs
     // the rest of the circuit.
-  procedure RunShots(Shots: Int32; Outcomes: PUInt64);
+  procedure RunShots(Shots: Int32; Outcomes: PUInt8);
     // Runs the circuit Shots times from the start, continuing the random
-    // sequence, and stores Bits of each shot in Outcomes[0..Shots - 1].
-    // Leaves the state of the last shot.
+    // sequence, and stores Bits of each shot in Outcomes: Shots rows of
+    // Circuit^.BitCount bytes. Leaves the state of the last shot.
 end;
   // A run of a circuit: the state vector, the classical bits, the position.
 
@@ -247,8 +250,8 @@ public
     // Number of Words.
   PassCount: Int32;
     // Number of entry points: pass0, pass1, ... run in this order.
-  GroupCount: UInt32;
-    // Workgroups along X in the dispatch of each pass.
+  GroupCountX, GroupCountY: UInt32;
+    // Workgroups in the dispatch of each pass: GroupCountX * GroupCountY * 1.
 
   procedure Init;
     // Makes an empty module: no words, no passes.
@@ -256,8 +259,8 @@ public
     // Frees the module.
   function Emit(const Circuit: TQsimCircuit; out Error: TQsimError): Boolean;
     // Replaces the module with compute shaders that apply the operations of
-    // Circuit to the amplitudes in a storage buffer. QSIM_OP_MEASURE is an
-    // error at its position for now.
+    // Circuit to float32 amplitudes in a storage buffer. The GPU does not
+    // measure: QSIM_OP_MEASURE is an error at its position.
 end;
   // GPU code of a circuit.
 ```
@@ -276,7 +279,7 @@ program bell;
 {$MODESWITCH OUT}
 
 uses
-  qsim_api;
+  qsim;
 
 const
   SOURCE =
@@ -297,7 +300,10 @@ begin
     WriteLn('bell:', Error.Line, ':', Error.Col, ': ', Error.Msg);
     Halt(1);
   end;
-  State.Init(@Circuit, 0);
+  if not State.Init(@Circuit, 0, Error) then begin
+    WriteLn('bell: ', Error.Msg);
+    Halt(1);
+  end;
   while State.Step do ;
   for I := 0 to (1 shl Circuit.QubitCount) - 1 do
     WriteLn(I, ': ', State.Amplitudes[I].Re:0:4, ' ',
@@ -310,7 +316,7 @@ end.
 Shots, and `qdb`'s `back`:
 
 ```pascal
-  GetMem(Outcomes, Shots * SizeOf(UInt64));
+  GetMem(Outcomes, Shots * Circuit.BitCount);
   State.Reset(Seed);
   State.RunShots(Shots, Outcomes);
 
@@ -324,8 +330,10 @@ Shots, and `qdb`'s `back`:
 
 `TQsimSpirv.Emit` turns a circuit into one SPIR-V module with one compute
 entry point, a pass, per operation; the constants of the operation are baked
-into its pass. A runner, an include that calls Vulkan like the visualizer and
-maybe sharing its device, runs the module. The runner is not drafted here.
+into its pass. Amplitudes on the GPU are float32, and the GPU does not
+measure: `Emit` fails at the first measurement. A runner, an include that
+calls Vulkan like the visualizer and maybe sharing its device, runs the
+module. The runner is not drafted here.
 
 The runner only dispatches the passes in order and knows nothing about
 operations, so the emitter can later fuse several operations into one pass
@@ -333,29 +341,36 @@ without changing the API.
 
 Module:
 
-- SPIR-V 1.0, for Vulkan 1.0. Capabilities `Shader` and `Float64`: the device
-  needs `shaderFloat64`, and results match `TQsimState` within 1e-9.
+- SPIR-V 1.0, for Vulkan 1.0, capability `Shader` only. Results match
+  `TQsimState` within 1e-5 on the test circuits.
 - One storage buffer at set 0, binding 0: a runtime array of 2^n amplitudes,
-  two float64 each, `ArrayStride` 16. It has the layout of `TQsimComplex`, so
-  the runner copies `Amplitudes` as is.
-- Every pass has local size L × 1 × 1 with L = min(64, 2^(n-1)), and
-  `GroupCount` = 2^(n-1) / L. Each invocation handles one pair of amplitudes,
+  two float32 each, `ArrayStride` 8. The runner converts them from and to
+  `TQsimComplex`.
+- Every pass has local size L × 1 × 1 with L = min(64, 2^(n-1)). The
+  2^(n-1) / L workgroups are dispatched as `GroupCountX` × `GroupCountY`, with
+  `GroupCountX` = min(workgroups, 32768): a device may allow only 65535
+  workgroups per dimension. Each invocation handles one pair of amplitudes,
   so there are no bounds checks. A circuit with no qubits gets no passes.
+- The device sets the limits, not qsim: the state must fit its memory and one
+  storage buffer binding. `maxStorageBufferRange` is a uint32, so a binding
+  holds at most 28 qubits, fewer on some devices; the runner reports a state
+  over the limits as an error. Indices fit 32 bits.
 
 A gate pass, as GLSL for reading (GLSL allows one entry point per module,
 SPIR-V many):
 
 ```glsl
-// cx q[0], q[1]: QSIM_OP_X, Target 1, Controls 1
+// cx q[0], q[1]: QSIM_OP_X, Target 1, Controls q[0]
 void pass1() {
-  uint i = gl_GlobalInvocationID.x;
+  uint i = gl_GlobalInvocationID.y * ROW + gl_GlobalInvocationID.x;
+                                         // ROW = GroupCountX * L
   uint i0 = ((i >> 1) << 2) | (i & 1u);  // 0 inserted at bit Target
   uint i1 = i0 | 2u;                     // 1 inserted at bit Target
-  if ((i0 & 1u) != 1u)                   // Controls
+  if ((i0 & 1u) != 1u)                   // mask of Controls
     return;
-  dvec2 a0 = Amp[i0];
-  dvec2 a1 = Amp[i1];
-  Amp[i0] = cmul(M00, a0) + cmul(M01, a1);  // M is Op.Matrix, constants
+  vec2 a0 = Amp[i0];
+  vec2 a1 = Amp[i1];
+  Amp[i0] = cmul(M00, a0) + cmul(M01, a1);  // M is Op.Matrix, as constants
   Amp[i1] = cmul(M10, a0) + cmul(M11, a1);
 }
 ```
@@ -364,10 +379,10 @@ A swap pass inserts 0 at bit `Target` the same way; if bit `Target2` of `i0`
 is 1 and the controls hold, it swaps `Amp[i0]` with the amplitude at `i0` with
 both bits flipped. Each pair is visited once.
 
-Runner: a storage buffer of 16 · 2^n bytes filled with the start state, one
-compute pipeline per pass, `PassCount` dispatches of `GroupCount` × 1 × 1 in
-order with a shader-write to shader-read barrier between them, then a read
-back.
+Runner: a storage buffer of 8 · 2^n bytes filled with the start state, one
+compute pipeline per pass, `PassCount` dispatches of `GroupCountX` ×
+`GroupCountY` × 1 in order with a shader-write to shader-read barrier between
+them, then a read back.
 
 Emitter: words appended to a growing buffer, ids given out in order. The
 header, capabilities, types, constants, the buffer and the invocation id come
@@ -376,32 +391,35 @@ passes use.
 
 Not covered yet:
 
-- Measurement: `Emit` fails at the first measure. Options: read the state
-  back and sample on the host, or a reduction pass on the GPU.
-- GPUs without float64.
 - One pipeline per operation: creating them takes longer as circuits grow.
   Fusing operations into passes fixes it when it matters.
+- A state larger than one storage buffer binding: splitting it over several
+  bindings would lift the 28 qubit bound.
 
 Tests: `make test` has no GPU and no SPIR-V tools, so a golden test prints the
 words of a small circuit in hex; it catches changes, not mistakes. Validity
 is checked by hand on Windows: `spirv-val`, and a runner whose amplitudes
-match `TQsimState` within 1e-9.
+match `TQsimState` within 1e-5.
 
 ## Draft: Vulkan renderer
 
-`src/qsim_vulkan_visualizer.inc` draws colored triangles and lines in pixels
-into one window. It knows nothing of quantum states: the visualization units
-compute what to draw, the Windows demo turns it into vertices. 3D views, like
-the Bloch spheres, are projected to pixels on the CPU, so the renderer stays
-2D: no matrices, no depth buffer.
+`src/qsim_vulkan_visualizer.inc` draws colored triangles, lines and text in
+pixels into one window. It knows nothing of quantum states: the visualization
+units compute what to draw, the Windows demo turns it into calls. 3D views,
+like the Bloch spheres, are projected to pixels on the CPU, so the renderer
+stays 2D: no matrices, no depth buffer.
 
 ```pascal
 // qsim_vulkan_visualizer.inc
 //
-//  Draws colored triangles and lines into a window through Vulkan. A Windows
-//  program includes it after its uses clause, which brings the windows unit,
-//  a Vulkan header and qsim_api into scope.
+//  Draws colored triangles, lines and text into a window through Vulkan. A
+//  Windows program includes it after its uses clause, which brings the
+//  windows unit, a Vulkan header and qsim into scope.
 //
+
+const
+  VULKAN_FONT_SIZE = 8;
+    // Width and height of a character of Text in pixels.
 
 type
 PVulkanVertex = ^TVulkanVertex;
@@ -435,6 +453,9 @@ public
   procedure Lines(Vertices: PVulkanVertex; Count: Int32);
     // Draws Count div 2 lines, one pixel wide, over what is drawn in this
     // frame.
+  procedure Text(X, Y: Single; const S: AnsiString; Color: UInt32);
+    // Draws S in one line, its top left corner at X, Y, over what is drawn in
+    // this frame. Characters other than ASCII 32..126 are drawn as '?'.
   procedure EndFrame;
     // Shows the frame. Recreates the swapchain if the window was resized.
 end;
@@ -451,6 +472,9 @@ Inside:
 - `Triangles` and `Lines` copy vertices into CPU memory; `EndFrame` uploads
   them to a host-visible vertex buffer that grows as needed, records the draws
   in call order and presents. One frame in flight.
+- `Text`: a public-domain 8×8 bitmap font for ASCII 32..126 is a `const`
+  array in the include. Every dot of a character becomes a one-pixel square
+  of two triangles, so there are no textures.
 - Shaders: the vertex shader maps pixels to clip space with the window size
   as a push constant (Vulkan's y axis points down, as pixels do); the fragment
   shader outputs the color. They are `const` arrays of SPIR-V words, each with
@@ -459,30 +483,21 @@ Inside:
 - Errors after `Init`, other than an out-of-date swapchain, end the program
   with a message: a demo has nothing to recover.
 
-Phases: 35 uses `Init`, `BeginFrame`, `EndFrame`, `Done`; 36 adds
-`Triangles` for bars; 39 adds `Lines` for the spheres. 37, 38 and 40 need
-nothing new: keys, colors and animation are the demo's.
+Phases: 35 uses `Init`, `BeginFrame`, `EndFrame`, `Done`; 36 adds `Triangles`
+for bars and `Text` for their labels; 39 adds `Lines` for the spheres. 37, 38
+and 40 need nothing new: keys, colors and animation are the demo's.
 
 ## Out of scope
 
 - The visualization units: their specs come with stage 2.
 - The OpenQASM subset: it grows phase by phase.
 - SIMD kernels: internal, they do not change the API.
-- The GPU runner, `qsim` options, `qdb` commands.
-
-## Open questions
-
-1. Unit name `qsim_api`: `qsim` itself clashes with the program name of the
-   CLI.
-2. 24 qubits as the limit.
-3. SPIR-V: measurement on the GPU, GPUs without float64.
-4. Vulkan renderer: text labels (bar values, gate names), for example a small
-   bitmap font drawn as triangles.
+- The GPU runner, `qrun` options, `qdb` commands.
 
 ## Done when
 
 - The listing compiles with FPC 3.2.2, given empty bodies, natively and for
-  ppc64, riscv64 and win64, and the example compiles against it; the renderer
+  ppc64, riscv64 and win64, and the examples compile against it; the renderer
   listing compiles for win64. Checked outside the repositories: phase 0 adds
   no code to qsim.
-- The owner accepts the spec, with the open questions answered or deferred.
+- The owner accepts the spec.

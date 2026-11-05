@@ -11,14 +11,14 @@ the state of each qubit, measurement samples.
 2. **Pascal library.** A clean, minimal API with as few calls as possible
    that still covers every need: compiling, getting errors, running, reading
    results, producing code (SPIR-V or another format, once decided), and
-   debugging. `qsim`, `qdb`, the visualizations and the demos use only this
+   debugging. `qrun`, `qdb`, the visualizations and the demos use only this
    API; `qdb` and the visualizations read the internal state through its
    debugging part.
-3. **`qsim` CLI.** Runs a circuit file (a subset of OpenQASM 3) and prints
+3. **`qrun` CLI.** Runs a circuit file (a subset of OpenQASM 3) and prints
    amplitudes, probabilities or measurement samples.
 4. **Visualization library.** Interesting and cool views of the state:
    probability bars, phases, Bloch spheres, circuit diagrams, histograms.
-   `qsim` and `qdb` show these views as text; only the Windows demo draws them
+   `qrun` and `qdb` show these views as text; only the Windows demo draws them
    with Vulkan.
 5. **`qdb` debugger.** A CLI tool: steps through a circuit in the terminal and
    shows the internal state after each gate. It never uses Vulkan.

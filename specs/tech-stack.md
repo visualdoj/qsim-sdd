@@ -29,7 +29,8 @@
 - Qubit 0 is the least significant bit of the basis index and the rightmost
   digit in `|...>`, as in Qiskit, so results can be checked against it.
 - Memory is 16 × 2^n bytes: 20 qubits take 16 MiB. Demos stay within about
-  20 qubits. A circuit over the qubit limit is an error, not a crash.
+  20 qubits. qsim has no qubit limit of its own: a state the OS cannot give
+  memory for is an error, not a crash.
 - Measurement uses qsim's own seeded RNG built on integer operations only, so
   one seed gives the same samples on every target.
 - SIMD kernels sit behind a per-CPU include, with the plain Pascal kernels as
@@ -37,7 +38,7 @@
   against, and the only backend on ppc64 and riscv64. x86_64 kernels must
   work with both the Linux and the win64 calling conventions.
 - Visualization units compute what to draw (bars, phases, Bloch vectors,
-  circuit layout) apart from how to draw it. `qsim` and `qdb` are CLI tools
+  circuit layout) apart from how to draw it. `qrun` and `qdb` are CLI tools
   and draw it as text; only the Windows demo includes
   `qsim_vulkan_visualizer.inc`.
 
@@ -55,9 +56,9 @@
 ## Layout of the qsim repository
 
     Makefile
-    src/            library units, qsim_<topic>.pas
+    src/            library units: qsim.pas, the public API, and qsim_<topic>.pas
     src/qsim_vulkan_visualizer.inc  Vulkan rendering, for programs that include it
-    tools/qsim/     qsim CLI
+    tools/qrun/     qrun CLI
     tools/qdb/      qdb debugger
     demos/<name>/   demos
     tests/<name>/   test programs, circuit files, expected output
@@ -66,7 +67,7 @@
 
 - Assertion tests: `{$ASSERTIONS ON}` and `Assert`; amplitudes are compared
   with a tolerance of 1e-9.
-- Golden-output tests: stdout of a program or a `qsim` run is compared with a
+- Golden-output tests: stdout of a program or a `qrun` run is compared with a
   committed `.can` file by `diff`.
 - `qdb` is tested by piping commands to its stdin.
 
