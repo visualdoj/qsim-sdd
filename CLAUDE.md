@@ -16,7 +16,7 @@ Repositories are checked out side by side (paths are relative to this file):
 - Use the same branch name NNN-name in both repositories; the spec and the code go in separate PRs.
 
 ## qsim-sdd layout
-- constitution.md — project principles: stack, style, constraints
+- specs/{mission,tech-stack,roadmap}.md — constitution: goals, stack and style, phase order
 - context/qsim.md — how to build qsim and run its tests
 - specs/NNN-name/{spec,plan,tasks}.md
 - .claude/skills/sdd-*/ — SDD workflow commands (the sdd- prefix avoids name collisions)

@@ -1,0 +1,73 @@
+# qsim tech stack
+
+## Language and build
+
+- Free Pascal 3.2.2, `{$MODE FPC}` with explicit modeswitches.
+- Code style: `agent-instructions/pascal_style.md`. In short: `object`/`record`
+  with `Init`/`Done`, no `class`, no exceptions, `Boolean` + `out` for errors,
+  sized integer types, `UPPER_SNAKE` constants instead of enums.
+- GNU make. The root `Makefile` has `build`, `test` and `clean`, and takes
+  `TARGET_CPU`, `TARGET_OS` and `EXEEXT` so `fpc-ci` can drive it.
+- The build and tests need only `fpc`, `make`, `sh` and `diff`.
+
+## Dependencies
+
+- None. Only `System` and the RTL subset allowed by the style guide: no
+  `SysUtils`, `Classes`, `Math`. `Sin`, `Cos`, `Sqrt`, `ArcTan` and `Pi` are in
+  `System`.
+- One exception: the Vulkan program uses a Vulkan header (such as
+  `visualdoj/dvulkan`) and the `windows` unit. Nothing else depends on them.
+  How the header gets into the build is decided in that program's spec.
+
+## Simulation model
+
+- Full state vector: 2^n amplitudes of `record Re, Im: Double end`.
+- Qubit 0 is the least significant bit of the basis index and the rightmost
+  digit in `|...>`, as in Qiskit, so results can be checked against it.
+- Memory is 16 × 2^n bytes: 20 qubits take 16 MiB. Demos stay within about
+  20 qubits. A circuit over the qubit limit is an error, not a crash.
+- Measurement uses qsim's own seeded RNG built on integer operations only, so
+  one seed gives the same samples on every target.
+- Visualization units compute what to draw (bars, phases, Bloch vectors,
+  circuit layout) apart from how to draw it, so terminal output, `qdb` and the
+  Vulkan program share them.
+
+## Input and output
+
+- Circuit files: a subset of OpenQASM 2.0, extended phase by phase
+  ([roadmap.md](roadmap.md)).
+- Input errors print `file:line:col: message` and exit with a nonzero code.
+- Text output only, no binary files, so byte order never matters.
+- Numbers are printed with a fixed number of digits, and `-0` as `0`, so
+  output is identical on all targets.
+- Plain ASCII by default; ANSI colors are opt-in.
+
+## Layout of the qsim repository
+
+    Makefile
+    src/            library units, qsim_<topic>.pas
+    tools/qsim/     qsim CLI
+    tools/qdb/      qdb debugger
+    demos/<name>/   demos
+    tests/<name>/   test programs, circuit files, expected output
+
+## Tests
+
+- Assertion tests: `{$ASSERTIONS ON}` and `Assert`; amplitudes are compared
+  with a tolerance of 1e-9.
+- Golden-output tests: stdout of a program or a `qsim` run is compared with a
+  committed `.can` file by `diff`.
+- `qdb` is tested by piping commands to its stdin.
+
+## Targets
+
+| Target | Run by | Checked |
+|---|---|---|
+| x86_64-linux | native | build + test |
+| powerpc64-linux, big-endian | `fpc-ci ppc64`, qemu | build + test |
+| riscv64-linux, FPC 3.3.1 | `fpc-ci riscv64`, qemu | build + test |
+| x86_64-win64 | `fpc-ci win64`, Wine | build only |
+
+- The Vulkan program builds only for win64.
+- qsim is a private repository and GitHub Actions minutes are paid: the local
+  checks above are the acceptance bar.
