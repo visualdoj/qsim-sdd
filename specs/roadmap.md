@@ -11,9 +11,10 @@ Each phase becomes one spec in `specs/NNN-name/` and is done when
 
 0. Design the whole library API: the interface of the public unit with a
    comment on each declaration, no implementation. It covers compiling,
-   getting errors, running, reading results, producing OpenQASM code, and
-   debugging (stepping and reading the internal state, for `qdb` and the
-   visualizations). Later phases implement it piece by piece.
+   getting errors, running, reading results, producing code (SPIR-V or
+   another format, once decided), and debugging (stepping and reading the
+   internal state, for `qdb` and the visualizations). Later phases implement
+   it piece by piece; producing code waits for the format decision.
 
 ## Stage 1: simulator core
 
@@ -33,8 +34,8 @@ Each phase becomes one spec in `specs/NNN-name/` and is done when
 13. A gate applied to a whole register: `h q;`.
 14. Several qubit and bit registers.
 15. User `gate` definitions.
-16. Producing code: a Pascal example produces a Bell circuit as OpenQASM
-    through the API, compiles it from memory, runs it and reads the result.
+16. Library example: a Pascal program compiles a Bell circuit from a string,
+    runs it and reads the result.
 
 ## Stage 2: visualizations
 
@@ -89,7 +90,7 @@ Each phase becomes one spec in `specs/NNN-name/` and is done when
 
 ## Ideas, not decided
 
-- GPU simulation: qsim generates SPIR-V compute shaders for gates and runs
-  them through Vulkan, possibly sharing the Vulkan setup with
+- GPU simulation: the producing-code part of the API generates SPIR-V compute
+  shaders for gates, which run through Vulkan, possibly sharing the setup with
   `qsim_vulkan_visualizer.inc`. Generating SPIR-V from Pascal keeps the build
   free of shader compilers. Decide after stage 6.
