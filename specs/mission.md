@@ -13,9 +13,10 @@ the state of each qubit, measurement samples.
    amplitudes, probabilities or measurement samples.
 4. **Visualization library.** Interesting and cool views of the state:
    probability bars, phases, Bloch spheres, circuit diagrams, histograms.
-   `qdb`, the demos and the Vulkan program all use it.
-5. **`qdb` debugger.** Steps through a circuit in the terminal and shows the
-   internal state after each gate.
+   `qsim` and `qdb` show these views as text; only the Windows demo draws them
+   with Vulkan.
+5. **`qdb` debugger.** A CLI tool: steps through a circuit in the terminal and
+   shows the internal state after each gate. It never uses Vulkan.
 6. **Demos.** Grover search, Shor factoring, a Sudoku solver, and a Vulkan
    visualization program for Windows.
 

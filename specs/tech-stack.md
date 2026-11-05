@@ -37,8 +37,9 @@
   against, and the only backend on ppc64 and riscv64. x86_64 kernels must
   work with both the Linux and the win64 calling conventions.
 - Visualization units compute what to draw (bars, phases, Bloch vectors,
-  circuit layout) apart from how to draw it, so terminal output, `qdb` and the
-  Vulkan program share them.
+  circuit layout) apart from how to draw it. `qsim` and `qdb` are CLI tools
+  and draw it as text; only the Windows demo includes
+  `qsim_vulkan_visualizer.inc`.
 
 ## Input and output
 
