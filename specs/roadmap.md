@@ -15,6 +15,9 @@ Each phase becomes one spec in `specs/NNN-name/` and is done when
    another format, once decided), and debugging (stepping and reading the
    internal state, for `qdb` and the visualizations). Later phases implement
    it piece by piece; producing code waits for the format decision.
+   The interface lives in the spec itself, with drafts of SPIR-V generation
+   and of `qsim_vulkan_visualizer.inc`; the phase is done when the spec is
+   accepted.
 
 ## Stage 1: simulator core
 
